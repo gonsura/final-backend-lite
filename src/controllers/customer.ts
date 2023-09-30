@@ -2,7 +2,6 @@ import { NextFunction, Request, Response } from 'express'
 import mongoose from 'mongoose'
 import Customer from '../models/customer'
 import moment from 'moment'
-import { date } from 'joi'
 
 export const createCustomer = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -29,7 +28,25 @@ export const readCustomer = async (req: Request, res: Response, next: NextFuncti
   try {
     const { id } = req.params
     const customer = await Customer.findById(id)
-    return customer ? res.status(200).json({ customer }) : res.status(404).json({ message: 'customer not found' })
+
+    const remapCustomer = {
+      id: customer?._id,
+      name: customer?.name,
+      email: customer?.email,
+      noTelp: customer?.noTelp,
+      alamat: customer?.alamat,
+      nik: customer?.nik,
+      kategory: customer?.orderedRoom.kategory,
+      lantai: customer?.orderedRoom.lantai,
+      noKamar: customer?.orderedRoom.noKamar,
+      hargaKamar: customer?.orderedRoom.hargaKamar,
+      tanggalCheckIn: new Date(customer?.check.tanggalCheckIn || '').toLocaleDateString(),
+      jamCheckIn: new Date(customer?.check.tanggalCheckIn || '').toLocaleTimeString(),
+      jumlahHari: customer?.check.jumlahHari,
+      tanggalCheckOut: new Date(customer?.check.tanggalCheckOut || '').toLocaleDateString(),
+      jamCheckOut: new Date(customer?.check.tanggalCheckOut || '').toLocaleTimeString(),
+    }
+    return customer ? res.status(200).json({ remapCustomer }) : res.status(404).json({ message: 'customer not found' })
   } catch (error) {
     if (error instanceof Error) {
       return res.status(500).json({ message: error.message })
@@ -123,9 +140,22 @@ export const readAllCustomerNotCheckOut = async (req: Request, res: Response, ne
 export const updateCustomer = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const { name, email, noTelp, alamat, nik, orderedRoom, check } = req.body
-    const { kategory, lantai, noKamar, hargaKamar } = orderedRoom
-    const { tanggalCheckIn, jumlahHari, tanggalCheckOut } = check
+    const {
+      name,
+      email,
+      noTelp,
+      alamat,
+      nik,
+      tanggalCheckIn,
+      jamCheckIn,
+      jumlahHari,
+      tanggalCheckOut,
+      jamCheckOut,
+      kategory,
+      lantai,
+      noKamar,
+      hargaKamar,
+    } = req.body
     const customer = await Customer.findByIdAndUpdate(id, {
       name,
       email,
@@ -139,9 +169,9 @@ export const updateCustomer = async (req: Request, res: Response, next: NextFunc
         hargaKamar,
       },
       check: {
-        tanggalCheckIn,
+        tanggalCheckIn: moment(`${tanggalCheckIn} ${jamCheckIn}`).toDate(),
         jumlahHari,
-        tanggalCheckOut,
+        tanggalCheckOut : moment(`${tanggalCheckOut} ${jamCheckOut}`).toDate(),
       },
     })
     return customer ? res.status(200).json({ customer }) : res.status(404).json({ message: 'customer not found' })
